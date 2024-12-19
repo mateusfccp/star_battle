@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 
 import 'position.dart';
 
+/// A Star Battle board.
 final class Board {
   Board({
     required this.dimension,
