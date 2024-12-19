@@ -1,0 +1,16 @@
+name: star_battle_file
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+repository: https://github.com/mateusfccp/star_battle/packages/start_battle_file
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  star_battle: ^1.0.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0

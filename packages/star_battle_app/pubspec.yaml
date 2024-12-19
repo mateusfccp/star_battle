@@ -1,0 +1,23 @@
+name: star_battle_app
+description: "An app that provides a UI for the Star Battle game."
+publish_to: 'none'
+version: 1.0.0
+repository: https://github.com/mateusfccp/star_battle/packages/start_battle_app
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  star_battle: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
