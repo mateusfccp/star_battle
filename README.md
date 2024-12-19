@@ -2,6 +2,8 @@
 
 A Dart/Flutter implementation of Star Battle.
 
+![Sample](https://github.com/user-attachments/assets/526f7e71-9b55-4d8a-91c5-8c7696d161fa)
+
 There are currently three packages in this repository.
 
 ## `star_battle`
