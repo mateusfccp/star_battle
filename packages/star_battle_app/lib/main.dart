@@ -23,13 +23,20 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  late Game game;
+  Game? game;
   
   @override
   void initState() {
     super.initState();
-    final board = StringBoardLoader().loadBoard(_board);
-    game = Game(board: board);
+
+    () async{
+      final board = await StringBoardLoader().loadBoard(_board);
+      if (context.mounted) {
+        setState(() {
+          game = Game(board: board);
+        });
+      }
+    }();
   }
   
   @override
@@ -38,7 +45,9 @@ class _MainAppState extends State<MainApp> {
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: GameScreen(game: game),
+          child: game == null //
+              ? const CircularProgressIndicator()
+              : GameScreen(game: game!),
         ),
       ),
     );

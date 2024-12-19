@@ -18,7 +18,7 @@ class GameScreen extends StatelessWidget {
       children: [
         const SizedBox(height: 16.0),
         Text(
-          'Queens',
+          'Star Battle',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 16.0),

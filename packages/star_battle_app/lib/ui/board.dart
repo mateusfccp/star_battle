@@ -29,8 +29,9 @@ final class Board extends StatelessWidget {
                 children: [
                   for (int x = 0; x < board.dimension; x++) //
                     _BoardCell(
-                      state: state[y][x],
-                      color: cells[y][x],
+                      topBorder: board.hasNeighborNorth(x, y),
+                      state: state[x][y],
+                      color: cells[x][y],
                       dimension: size,
                       onTap: () => onTapCell(x, y),
                     ),
