@@ -43,6 +43,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
 
     return MaterialApp(
+      title: 'Star Battle',
       home: Scaffold(
         body: Center(
           child: game == null //
