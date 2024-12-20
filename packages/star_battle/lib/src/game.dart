@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:star_battle/src/bidimensional_list.dart';
 
 import 'board.dart';
 import 'position.dart';
@@ -9,7 +10,8 @@ import 'position.dart';
 final class Game {
   /// Creates a new game with the given [board].
   Game({required this.board})
-      : _cachedState = _createEmptyState(board.dimension),
+      : _cachedBoardContent = _createEmptyContent(board.dimension),
+        _cachedBoardStatus = _createEmptyStatus(board.dimension),
         _startTime = DateTime.now();
 
   /// A stream that emits whenever the game state changes.
@@ -24,12 +26,23 @@ final class Game {
   DateTime _startTime;
 
   /// The current state of the game board.
-  UnmodifiableListView<UnmodifiableListView<CellState>> get state {
-    return UnmodifiableListView([
-      for (final row in _cachedState) UnmodifiableListView(row),
-    ]);
+  BidimensionalList<CellState> get state {
+    final rows = [
+      for (var y = 0; y < board.dimension; y++)
+        [
+          for (var x = 0; x < board.dimension; x++)
+            (
+              content: _cachedBoardContent(x, y),
+              status: _cachedBoardStatus(x, y),
+            ),
+        ],
+    ];
+
+    return BidimensionalList.fromRows(rows);
   }
-  _State _cachedState;
+
+  BidimensionalList<CellStatus> _cachedBoardStatus;
+  BidimensionalList<CellContent> _cachedBoardContent;
 
   /// Whether the last action can be undone.
   ///
@@ -49,27 +62,15 @@ final class Game {
   void reset() {
     _events.clear();
     _redoEvents.clear();
-    _cachedState = _createEmptyState(board.dimension);
+    _cachedBoardContent = _createEmptyContent(board.dimension);
     _startTime = DateTime.now();
     _stateController.add(null);
   }
 
-  /// Gets the state of the cell at the given position.
-  CellState cellStateAt(int x, int y) {
-    return _cachedState[y][x];
-  }
-
   /// Adds a star to the board at the given position.
-  void addStar(int x, int y) {
+  void placeStar(int x, int y) {
     final position = Position(x, y);
-    final event = AddStar(position);
-    _addEvent(event);
-  }
-
-  /// Removes a star from the board at the given position.
-  void removeStar(int x, int y) {
-    final position = Position(x, y);
-    final event = RemoveStar(position);
+    final event = PlaceStar(position);
     _addEvent(event);
   }
 
@@ -80,10 +81,10 @@ final class Game {
     _addEvent(event);
   }
 
-  /// Unmarks a cell on the board at the given position.
-  void unmarkCell(int x, int y) {
+  /// Clears a cell on the board at the given position.
+  void clearCell(int x, int y) {
     final position = Position(x, y);
-    final event = UnmarkCell(position);
+    final event = ClearCell(position);
     _addEvent(event);
   }
 
@@ -93,7 +94,8 @@ final class Game {
 
     final event = _events.removeLast();
     _redoEvents.add(event);
-    _cachedState = _computeState();
+    _cachedBoardContent = _computeContent();
+    _cachedBoardStatus = _computeStatus();
     _stateController.add(null);
   }
 
@@ -103,33 +105,35 @@ final class Game {
 
     final event = _redoEvents.removeLast();
     _events.add(event);
-    _cachedState = _computeState(
-      initialState: _cachedState,
+    _cachedBoardContent = _computeContent(
+      initialContent: _cachedBoardContent,
       from: _events.length - 1,
     );
+    _cachedBoardStatus = _computeStatus();
     _stateController.add(null);
   }
 
   void _addEvent(GameEvent event) {
     _redoEvents.clear();
     _events.add(event);
-    _cachedState = _computeState(
-      initialState: _cachedState,
+    _cachedBoardContent = _computeContent(
+      initialContent: _cachedBoardContent,
       from: _events.length - 1,
     );
+    _cachedBoardStatus = _computeStatus();
     _stateController.add(null);
   }
 
-  _State _computeState({
-    _State? initialState,
+  BidimensionalList<CellContent> _computeContent({
+    BidimensionalList<CellContent>? initialContent,
     int from = 0,
   }) {
-    final _State state;
+    final BidimensionalList<CellContent> content;
 
-    if (initialState == null) {
-      state = _createEmptyState(board.dimension);
+    if (initialContent == null) {
+      content = _createEmptyContent(board.dimension);
     } else {
-      state = [...initialState];
+      content = BidimensionalList.fromRows(initialContent.rows);
     }
 
     for (var i = from; i < _events.length; i++) {
@@ -138,40 +142,118 @@ final class Game {
       final Position(:x, :y) = event.position;
 
       switch (event) {
-        case AddStar():
-          assert(state[y][x] != CellState.star);
-          state[y][x] = CellState.star;
-        case RemoveStar():
-          assert(state[y][x] == CellState.star);
-          state[y][x] = CellState.empty;
+        case PlaceStar():
+          assert(content(x, y) != CellContent.star);
+          content.set(x, y, CellContent.star);
         case MarkCell():
-          assert(state[y][x] != CellState.marked);
-          state[y][x] = CellState.marked;
-        case UnmarkCell():
-          assert(state[y][x] == CellState.marked);
-          state[y][x] = CellState.empty;
+          assert(content(x, y) != CellContent.marked);
+          content.set(x, y, CellContent.marked);
+        case ClearCell():
+          assert(content(x, y) != CellContent.empty);
+          content.set(x, y, CellContent.empty);
       }
     }
 
-    return state;
+    return content;
+  }
+
+  BidimensionalList<CellStatus> _computeStatus() {
+    final status = _createEmptyStatus(board.dimension);
+
+    // Compute columns
+    for (int x = 0; x < board.dimension; x++) {
+      final column = _cachedBoardContent.column(x);
+      final stars = column.where((cell) => cell == CellContent.star);
+      if (stars.length > 1) {
+        for (int y = 0; y < board.dimension; y++) {
+          if (_cachedBoardContent(x, y) == CellContent.star) {
+            status.set(x, y, CellStatus.invalid);
+          }
+        }
+      }
+    }
+
+    // Compute rows
+    for (int y = 0; y < board.dimension; y++) {
+      final row = _cachedBoardContent.row(y);
+      if (row.where((cell) => cell == CellContent.star).length > 1) {
+        for (int x = 0; x < board.dimension; x++) {
+          if (_cachedBoardContent(x, y) == CellContent.star) {
+            status.set(x, y, CellStatus.invalid);
+          }
+        }
+      }
+    }
+
+    // Compute regions
+    for (final region in board.regions) {
+      final stars = region.positions.where(
+        (position) => _cachedBoardContent(position.x, position.y) == CellContent.star,
+      );
+
+      if (stars.length > 1) {
+        for (final position in region.positions) {
+          if (_cachedBoardContent(position.x, position.y) == CellContent.star) {
+            status.set(position.x, position.y, CellStatus.invalid);
+          }
+        }
+      }
+    }
+
+    // Compute star surrounded cells
+    for (final star in _cachedBoardContent.where((cell) => cell == CellContent.star)) {
+      for (final neighbor in star.neighbors(xbound: board.dimension, ybound: board.dimension)) {
+        if (_cachedBoardContent(neighbor.x, neighbor.y) == CellContent.star) {
+          status.set(star.x, star.y, CellStatus.invalid);
+          status.set(neighbor.x, neighbor.y, CellStatus.invalid);
+        }
+      }
+    }
+
+    return status;
   }
 }
 
-typedef _State = List<List<CellState>>;
-
 @pragma('vm:prefer-inline')
-_State _createEmptyState(int dimension) {
-  return _State.generate(
-    dimension,
-    (index) => List.filled(dimension, CellState.empty),
+BidimensionalList<CellContent> _createEmptyContent(int dimension) {
+  return BidimensionalList<CellContent>.generate(
+    width: dimension,
+    height: dimension,
+    create: (x, y) => CellContent.empty,
   );
 }
 
-/// The possible states of a cell on the board.
-enum CellState {
+@pragma('vm:prefer-inline')
+BidimensionalList<CellStatus> _createEmptyStatus(int dimension) {
+  return BidimensionalList<CellStatus>.generate(
+    width: dimension,
+    height: dimension,
+    create: (x, y) => CellStatus.valid,
+  );
+}
+
+/// The state of a cell on the board.
+typedef CellState = ({CellContent content, CellStatus status});
+
+/// The possible contents of a cell on the board.
+enum CellContent {
+  /// An empty cell.
   empty,
+
+  /// A cell with a star.
   star,
+
+  /// A cell that has been marked.
   marked,
+}
+
+/// The validity status of a cell on the board.
+enum CellStatus {
+  /// The cell is in an invalid state.
+  invalid,
+
+  /// The cell is in a valid state.
+  valid,
 }
 
 /// An action that can be performed on the game.
@@ -181,25 +263,18 @@ sealed class GameEvent {
 }
 
 /// An action representing the addition of a star to the board.
-final class AddStar implements GameEvent {
-  const AddStar(this.position);
+final class PlaceStar implements GameEvent {
+  /// Creates a new place star event at the given [position].
+  const PlaceStar(this.position);
 
   /// The position where the star will be added.
   @override
   final Position position;
 }
 
-/// An action representing the removal of a star from the board.
-final class RemoveStar implements GameEvent {
-  const RemoveStar(this.position);
-
-  /// The position from where the star will be removed.
-  @override
-  final Position position;
-}
-
 /// An action representing the marking of a cell on the board.
 final class MarkCell implements GameEvent {
+  /// Creates a new mark cell event at the given [position].
   const MarkCell(this.position);
 
   /// The position of the cell to be marked.
@@ -207,11 +282,11 @@ final class MarkCell implements GameEvent {
   final Position position;
 }
 
-/// An action representing the unmarking of a cell on the board.
-final class UnmarkCell implements GameEvent {
-  const UnmarkCell(this.position);
+/// An action representing the clearing of a cell on the board.
+final class ClearCell implements GameEvent {
+  /// Creates a new clear cell event at the given [position].
+  const ClearCell(this.position);
 
-  /// The position of the cell to be unmarked.
   @override
   final Position position;
 }

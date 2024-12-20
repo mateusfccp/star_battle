@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:star_battle/src/bidimensional_list.dart';
+
 import 'board.dart';
 import 'position.dart';
 
@@ -26,12 +28,12 @@ final class StringBoardLoader implements BoardLoader<String> {
   @override
   Future<Board> loadBoard(String source) async {
     final board = _parseBoard(source);
-    final dimension = board.length;
+    final dimension = board.width;
     final regions = <int, Set<Position>>{};
 
     for (var y = 0; y < dimension; y++) {
       for (var x = 0; x < dimension; x++) {
-        final region = board[y][x];
+        final region = board(x, y);
         final position = Position(x, y);
 
         if (regions[region] case final region?) {
@@ -52,7 +54,7 @@ final class StringBoardLoader implements BoardLoader<String> {
 
   static final _singleDigit = RegExp(r'\b\d\b');
 
-  static List<List<int>> _parseBoard(String source) {
+  static BidimensionalList<int> _parseBoard(String source) {
     final lines = LineSplitter.split(source);
     final board = <List<int>>[];
 
@@ -63,6 +65,6 @@ final class StringBoardLoader implements BoardLoader<String> {
       ]);
     }
 
-    return board;
+    return BidimensionalList.fromRows(board);
   }
 }

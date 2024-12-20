@@ -50,10 +50,10 @@ class GameScreen extends StatelessWidget {
   }
 
   void _onTapCell(int x, int y) {
-    return switch (game.cellStateAt(x, y)) {
-      CellState.empty => game.markCell(x, y),
-      CellState.marked => game.addStar(x, y),
-      CellState.star => game.removeStar(x, y),
+    return switch (game.state(x, y).content) {
+      CellContent.empty => game.markCell(x, y),
+      CellContent.marked => game.placeStar(x, y),
+      CellContent.star => game.clearCell(x, y),
     };
   }
 }

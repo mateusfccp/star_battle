@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
@@ -29,6 +30,32 @@ final class Position {
 
   /// The y-coordinate of the position.
   int get y => internalValue.getUint8(1);
+
+  /// Gets the neighbors of this position.
+  ///
+  /// The neighbors are the positions that surrounds this position, including
+  /// the diagonals.
+  ///
+  /// If a neighbor is outside of the bounds of the board, it will not be
+  /// included in the list.
+  Iterable<Position> neighbors({int? xbound, int? ybound}) sync* {
+    final horizontalBound = min(xbound ?? 255, 255);
+    final verticalBound = min(ybound ?? 255, 255);
+    for (final dx in [-1, 0, 1]) {
+      for (final dy in [-1, 0, 1]) {
+        if (dx == 0 && dy == 0) {
+          continue;
+        }
+
+        final x = this.x + dx;
+        final y = this.y + dy;
+
+        if (x >= 0 && x < horizontalBound && y >= 0 && y < verticalBound) {
+          yield Position(x, y);
+        }
+      }
+    }
+  }
 
   @override
   bool operator ==(Object other) {

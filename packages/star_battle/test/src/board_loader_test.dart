@@ -22,7 +22,7 @@ void main() {
       );
 
       expect(
-        board.regions,
+        board.regionsMap,
         equals({
           0: BoardRegion({
             Position(0, 0),

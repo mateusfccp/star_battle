@@ -1,6 +1,5 @@
-import 'dart:collection';
-
 import 'package:meta/meta.dart';
+import 'package:star_battle/src/bidimensional_list.dart';
 
 import 'position.dart';
 
@@ -17,16 +16,29 @@ final class Board {
           checkBoardCompleteness(dimension: dimension, regions: regions),
           'The regions do not cover all possible positions on the board.',
         ),
-        regions = regions.asMap(),
-        _cells = _computeCells(dimension: dimension, regions: regions);
+        regionsMap = regions.asMap(),
+        _cells = _computeCells(dimension: dimension, regions: regions),
+        _positionRegion = _computePositionRegion(regions: regions);
 
   /// The dimension of the board.
   ///
   /// The board is a square, so this is the length of both sides.
   final int dimension;
 
+  /// The regions on the board.
+  List<BoardRegion> get regions => [...regionsMap.values];
+
   @visibleForTesting
-  final Map<int, BoardRegion> regions;
+  final Map<int, BoardRegion> regionsMap;
+
+  /// Returns the region at the given position.
+  BoardRegion regionAt(int x, int y) {
+    final region = _positionRegion[Position(x, y)];
+    assert(region != null, 'No region found at position ($x, $y).');
+    return region!;
+  }
+
+  final Map<Position, BoardRegion> _positionRegion;
 
   /// A matrix representation of the board.
   ///
@@ -34,15 +46,25 @@ final class Board {
   /// it belongs to.
   ///
   /// The first index is the x-coordinate and the second is the y-coordinate.
-  UnmodifiableListView<UnmodifiableListView<int>> get cells {
-    return UnmodifiableListView([
-      for (final row in _cells) UnmodifiableListView(row),
-    ]);
+  BidimensionalList<int> get cells => _cells;
+
+  final BidimensionalList<int> _cells;
+
+  static Map<Position, BoardRegion> _computePositionRegion({
+    required List<BoardRegion> regions,
+  }) {
+    final positionRegion = <Position, BoardRegion>{};
+
+    for (final region in regions) {
+      for (final position in region.positions) {
+        positionRegion[position] = region;
+      }
+    }
+
+    return positionRegion;
   }
 
-  final List<List<int>> _cells;
-
-  static List<List<int>> _computeCells({
+  static BidimensionalList<int> _computeCells({
     required int dimension,
     required List<BoardRegion> regions,
   }) {
@@ -53,7 +75,7 @@ final class Board {
 
     for (int i = 0; i < regions.length; i++) {
       for (final position in regions[i].positions) {
-        cells[position.x][position.y] = i;
+        cells[position.y][position.x] = i;
       }
     }
 
@@ -62,7 +84,7 @@ final class Board {
       return !flatCells.contains(-1) && flatCells.length == dimension * dimension;
     }());
 
-    return cells;
+    return BidimensionalList.fromRows(cells);
   }
 }
 
@@ -87,7 +109,7 @@ extension type BoardRegion._(Set<Position> _value) {
   ///
   /// Out of bounds positions are considered to not be contained.
   bool contains(int x, int y) {
-    if (x < 0 || x >= 256 || y < 0 || y >= 256) {
+    if (x < 0 || x >= 255 || y < 0 || y >= 255) {
       return false;
     } else {
       return _value.contains(Position(x, y));
