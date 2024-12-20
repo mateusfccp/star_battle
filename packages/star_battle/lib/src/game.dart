@@ -63,6 +63,7 @@ final class Game {
     _events.clear();
     _redoEvents.clear();
     _cachedBoardContent = _createEmptyContent(board.dimension);
+    _cachedBoardStatus = _createEmptyStatus(board.dimension);
     _startTime = DateTime.now();
     _stateController.add(null);
   }
