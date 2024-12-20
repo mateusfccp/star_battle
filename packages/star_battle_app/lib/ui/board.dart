@@ -1,46 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:star_battle/star_battle.dart' hide Board;
-import 'package:star_battle/star_battle.dart' as core show Board;
 
-final class Board extends StatelessWidget {
+final class Board extends StatefulWidget {
   const Board({
     super.key,
-    required this.state,
-    required this.board,
-    required this.onTapCell,
+    required this.game,
   });
 
-  final BidimensionalList<CellState> state;
-  final core.Board board;
-  final void Function(int x, int y) onTapCell;
+  final Game game;
+
+  @override
+  State<Board> createState() => _BoardState();
+}
+
+class _BoardState extends State<Board> {
+  CellContent? initialContent;
 
   @override
   Widget build(BuildContext context) {
+    final state = widget.game.state;
+    final board = widget.game.board;
     final cells = board.cells;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest.shortestSide / board.dimension;
-        return Column(
-          children: [
-            for (int y = 0; y < board.dimension; y++)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (int x = 0; x < board.dimension; x++) //
-                    _BoardCell(
-                      topBorder: !board.regionAt(x, y).hasNeighborNorth(x, y),
-                      rightBorder: !board.regionAt(x, y).hasNeighborEast(x, y),
-                      bottomBorder: !board.regionAt(x, y).hasNeighborSouth(x, y),
-                      leftBorder: !board.regionAt(x, y).hasNeighborWest(x, y),
-                      state: state(x, y),
-                      region: cells(x, y),
-                      dimension: size,
-                      onTap: () => onTapCell(x, y),
-                    ),
-                ],
-              ),
-          ],
+
+        return GestureDetector(
+          onPanStart: (details) {
+            final x = (details.localPosition.dx / size).floor();
+            final y = (details.localPosition.dy / size).floor();
+
+            initialContent = state(x, y).content;
+          },
+          onPanUpdate: (details) {
+            assert(initialContent != null);
+
+            final x = (details.localPosition.dx / size).floor();
+            final y = (details.localPosition.dy / size).floor();
+
+            final newContent = switch (initialContent) {
+              CellContent.empty => CellContent.marked,
+              CellContent.marked || null => null,
+              CellContent.star => CellContent.empty,
+            };
+
+            if (state(x, y).content != newContent) {
+              switch (newContent) {
+                case CellContent.marked:
+                  widget.game.markCell(x, y);
+                case CellContent.empty:
+                  widget.game.clearCell(x, y);
+                case CellContent.star || null:
+              }
+            }
+          },
+          onPanCancel: () => initialContent = null,
+          onPanEnd: (details) => initialContent = null,
+          child: Column(
+            children: [
+              for (int y = 0; y < board.dimension; y++)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (int x = 0; x < board.dimension; x++) //
+                      _BoardCell(
+                        topBorder: !board.regionAt(x, y).hasNeighborNorth(x, y),
+                        rightBorder: !board.regionAt(x, y).hasNeighborEast(x, y),
+                        bottomBorder: !board.regionAt(x, y).hasNeighborSouth(x, y),
+                        leftBorder: !board.regionAt(x, y).hasNeighborWest(x, y),
+                        state: state(x, y),
+                        region: cells(x, y),
+                        dimension: size,
+                        onTap: () {
+                          switch (widget.game.state(x, y).content) {
+                            case CellContent.empty:
+                              widget.game.markCell(x, y);
+                            case CellContent.marked:
+                              widget.game.placeStar(x, y);
+                            case CellContent.star:
+                              widget.game.clearCell(x, y);
+                          }
+                          ;
+                        },
+                      ),
+                  ],
+                ),
+            ],
+          ),
         );
       },
     );

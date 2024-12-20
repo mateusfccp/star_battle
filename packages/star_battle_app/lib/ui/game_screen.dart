@@ -30,9 +30,7 @@ class GameScreen extends StatelessWidget {
                 stream: game.onStateChanged,
                 builder: (context, snapshot) {
                   return Board(
-                    state: game.state,
-                    board: game.board,
-                    onTapCell: _onTapCell,
+                    game: game,
                   );
                 },
               ),
@@ -47,13 +45,5 @@ class GameScreen extends StatelessWidget {
         const SizedBox(height: 16.0),
       ],
     );
-  }
-
-  void _onTapCell(int x, int y) {
-    return switch (game.state(x, y).content) {
-      CellContent.empty => game.markCell(x, y),
-      CellContent.marked => game.placeStar(x, y),
-      CellContent.star => game.clearCell(x, y),
-    };
   }
 }
