@@ -81,7 +81,6 @@ class _BoardState extends State<Board> {
                             case CellContent.star:
                               widget.game.clearCell(x, y);
                           }
-                          ;
                         },
                       ),
                   ],
@@ -314,25 +313,25 @@ final class _BoardCellBoxPainter extends BoxPainter {
 
     canvas.drawLine(
       rect.topLeft,
-      rect.topRight,
+      rect.topRight + Offset(1.0, 0.0),
       decoration.topBorder ? thickBorderPaint : thinBorderPaint,
     );
 
     canvas.drawLine(
       rect.topRight,
-      rect.bottomRight,
+      rect.bottomRight + Offset(0.0, 1.0),
       decoration.rightBorder ? thickBorderPaint : thinBorderPaint,
     );
 
     canvas.drawLine(
       rect.bottomRight,
-      rect.bottomLeft,
+      rect.bottomLeft - Offset(1.0, 0.0),
       decoration.bottomBorder ? thickBorderPaint : thinBorderPaint,
     );
 
     canvas.drawLine(
       rect.bottomLeft,
-      rect.topLeft,
+      rect.topLeft - Offset(0.0, 1.0),
       decoration.leftBorder ? thickBorderPaint : thinBorderPaint,
     );
   }
